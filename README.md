@@ -9,11 +9,11 @@ QuantBob is my pipeline for developing models for Numerai.
 Data will look like this:
 
 
- ID  |   era |  feature_1 | ... | feature_n | target | target_<TYPE 0>_20 | target_<TYPE 0>_60 | ... | target_<TYPE 1>_20 | target_<TYPE 1>_60| 
------+-------+------------+-----+-----------+--------+-----------------+-----------------------+-----+--------------------+-------------------+
- z   |     1 |         0  | ... |  0.23     | 0.5    |              0.5 |                0.11  | ... |              0.5434 |              0.31 |
- x   |     1 |         0  | ... |  0.30     | 0.75   |              0.75|                0.11  | ... |              0.5434 |              0.31 |
- y   |     2 |         1  | ... |  0.78     | 0.25   |              0.25|                0.11  | ... |              0.5434 |              0.31 |
+ ID  |   era |  feature_1 | ... | feature_n | target | target_<TYPE 0>_20 | target_<TYPE 0>_60 | ... | target_<TYPE 1>_20 | target_<TYPE 1>_60 | 
+---- |------ | ---------- | --- | --------- | ------ | ------------------ | ------------------ | --- | ------------------ | ------------------ | 
+ z   |     1 |         0  | ... |  0.23     | 0.5    |              0.5   |              0.11  | ... |             0.5434 |               0.31 |
+ x   |     1 |         0  | ... |  0.30     | 0.75   |              0.75  |              0.11  | ... |             0.5434 |               0.31 |
+ y   |     2 |         1  | ... |  0.78     | 0.25   |              0.25  |              0.11  | ... |             0.5434 |               0.31 |
 
 
 
@@ -40,7 +40,7 @@ There are 1050 features and no groups.
 
 ##### target
 
-"The target represents an abstract measure of performance ~4 weeks into the future." - ![numerai](https://docs.numer.ai/tournament/learn)
+"The target represents an abstract measure of performance ~4 weeks into the future." - [numerai](https://docs.numer.ai/tournament/learn)
 
 
 There are 10 different types of targets and 20 targets in total. However, we are only scores on one target. This currently "target_nomi_20" (e.g. "target_<TYPE 0>_20" )
@@ -61,7 +61,7 @@ What we are essentially doing is predicting the future behavior of a stock; give
 
 ##### What about the other 19 targets, what should we do with these? 
 
-these targets are referd to as Auxillary Targets. These can be used to train models and its apparently good to use them to train models, as models seems to generalize better if trained on these as well (see ![ref](https://github.com/numerai/example-scripts/blob/master/analysis_and_tips.ipynb))
+these targets are referd to as Auxillary Targets. These can be used to train models and its apparently good to use them to train models, as models seems to generalize better if trained on these as well (see [ref](https://github.com/numerai/example-scripts/blob/master/analysis_and_tips.ipynb))
 
 
 ##### Evaluation
@@ -76,7 +76,7 @@ We do have more than just features; we also have eras (time). Even though eras d
 
 #### Data Analyis
 
-Currently I have just summerized the points made ![here](https://github.com/numerai/example-scripts/blob/master/analysis_and_tips.ipynb):
+Currently I have just summerized the points made [here](https://github.com/numerai/example-scripts/blob/master/analysis_and_tips.ipynb):
 
 - Each Era has around 4000-5000 rows
 
