@@ -1,11 +1,13 @@
 # QuantBob
 
-QuantBob is my pipeline for developing models for Numerai.
+QuantBob is my pipeline for developing models for [Numerai](https://numer.ai/).
 
 ---
 
-#### Overview of Numerai task
+## Data Overiew
 
+
+### Example
 
 Data will look like this:
 
@@ -26,7 +28,6 @@ simply a id for a unique stock. This ID is unique for each ERA so you cannot tra
 Some good forum post to clear some confusion
 
 https://forum.numer.ai/t/noob-question-regarding-data/1700
-
 
 
 #### era 
@@ -50,7 +51,7 @@ The number following some targets are the number of days in the future?
 
 ---
 
-### Task
+## Task
 
 The task is to:
 
@@ -67,19 +68,19 @@ these targets are referd to as Auxillary Targets. These can be used to train mod
 
 --
 
-### Evaluation
+## Evaluation
 
 All models are scored based on the rank-correlation (spearman) with the target
 
 ---
 
-### what about ERAS?
+## what about ERAS?
 
 We do have more than just features; we also have eras (time). Even though eras do not change the nature of the task, eras can be used in various ways. E.g. creating ensambles, train a model per era.
 
 ---
 
-### Data Analyis
+## Data Analyis
 
 Currently I have just summerized the points made [here](https://github.com/numerai/example-scripts/blob/master/analysis_and_tips.ipynb):
 
@@ -117,7 +118,7 @@ Currently I have just summerized the points made [here](https://github.com/numer
 
 ---
 
-### Overview of QuantBob
+## Overview of QuantBob
 
 QuantBob is a pipeline for testing, evaluating and keeping track of models.
 
