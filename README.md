@@ -2,6 +2,7 @@
 
 QuantBob is my pipeline for developing models for Numerai.
 
+---
 
 #### Overview of Numerai task
 
@@ -47,6 +48,7 @@ There are 10 different types of targets and 20 targets in total. However, we are
 
 The number following some targets are the number of days in the future?
 
+---
 
 ### Task
 
@@ -63,16 +65,19 @@ What we are essentially doing is predicting the future behavior of a stock; give
 
 these targets are referd to as Auxillary Targets. These can be used to train models and its apparently good to use them to train models, as models seems to generalize better if trained on these as well (see [ref](https://github.com/numerai/example-scripts/blob/master/analysis_and_tips.ipynb))
 
+--
 
-#### Evaluation
+### Evaluation
 
 All models are scored based on the rank-correlation (spearman) with the target
 
+---
 
-#### what about ERAS?
+### what about ERAS?
 
 We do have more than just features; we also have eras (time). Even though eras do not change the nature of the task, eras can be used in various ways. E.g. creating ensambles, train a model per era.
 
+---
 
 ### Data Analyis
 
@@ -109,6 +114,8 @@ Currently I have just summerized the points made [here](https://github.com/numer
 
 - Training with the auxillary target can result in models with different pattersn of feature exposure
 
+
+---
 
 ### Overview of QuantBob
 
