@@ -17,7 +17,7 @@ Data will look like this:
 
 
 
-##### ID
+#### ID
 
 simply a id for a unique stock. This ID is unique for each ERA so you cannot track a stock through time. (I.e. we are not doing time series prediction)
 
@@ -28,17 +28,17 @@ https://forum.numer.ai/t/noob-question-regarding-data/1700
 
 
 
-##### era 
+#### era 
 
 Eras are in 5 week intervals, and they seem to overlap by rolling. E.g. if we have 20 days era 1 is 1-5, era 2 2-6, ..., era 5 5-9
 
-##### feature_X
+#### features
 
 These are the features we need to work with. These are "anonymised" meaning we have no idea what they represent.
 
 There are 1050 features and no groups.
 
-##### target
+#### target
 
 "The target represents an abstract measure of performance ~4 weeks into the future." - [numerai](https://docs.numer.ai/tournament/learn)
 
@@ -59,22 +59,22 @@ main target are the following discrete values {0, 0.25, 0.5, 0.75, 1}. Other tat
     
 What we are essentially doing is predicting the future behavior of a stock; given some state of a stock at time t, we try to predict something about its stock at time t+n, where n is some period of time
 
-##### What about the other 19 targets, what should we do with these? 
+#### What about the other 19 targets, what should we do with these? 
 
 these targets are referd to as Auxillary Targets. These can be used to train models and its apparently good to use them to train models, as models seems to generalize better if trained on these as well (see [ref](https://github.com/numerai/example-scripts/blob/master/analysis_and_tips.ipynb))
 
 
-##### Evaluation
+#### Evaluation
 
 All models are scored based on the rank-correlation (spearman) with the target
 
 
-##### what about ERAS?
+#### what about ERAS?
 
 We do have more than just features; we also have eras (time). Even though eras do not change the nature of the task, eras can be used in various ways. E.g. creating ensambles, train a model per era.
 
 
-#### Data Analyis
+### Data Analyis
 
 Currently I have just summerized the points made [here](https://github.com/numerai/example-scripts/blob/master/analysis_and_tips.ipynb):
 
