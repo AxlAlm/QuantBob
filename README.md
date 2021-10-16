@@ -120,26 +120,21 @@ Currently I have just summerized the points made [here](https://github.com/numer
 
 ## Overview of QuantBob
 
-QuantBob is a pipeline for testing, evaluating and keeping track of models.
+QuantBob is a very simple library aimed to do four things:
 
-It consist of the following modular components:
+1) download and upload numerai data
+2) train and predict with models
+3) evaluate models
+4) document and store the score of various models
 
-- Dataset
-    - downloads and stores the Numerai data
 
-- DataSampler
-    - a data sample will contain techniques and approach to create data splits. This can include creating various dataset splits for each era, random sampling features etc etc
-    - this class will retuns a iterator of dataset to train models for
-    - each dataset will have X
+We have two main classes:
 
-- Model
-    - model is the model used to train the data. This can be any sklearn, xgboost or whatever algorithm you want.
+- Dataset: will download and upload data.
 
-- Evaluater
-    - evaluation will evaluate all the 
+- Model: will contain everything from feature selection, data splitting/ensamble configuration and model training and prediction
 
-- QuantBob
-    - For Bob to to his job he needs a Dataset, Datasampler, Model and an Evaluator.
+Code used for evaluation is copied from the numerai/example-scripts repo and slightly refactored (just to for me to understand that it does).
 
 
 Example:
