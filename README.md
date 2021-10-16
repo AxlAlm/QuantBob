@@ -172,3 +172,10 @@ Currently I have just summerized the points made [here](https://github.com/numer
 
 - Training with the auxillary target can result in models with different pattersn of feature exposure
 
+---
+
+## TODO 
+
+- Include a comparison to previous models and to current leaderboard so one can get a better understanding of performance
+- Create some models!
+
