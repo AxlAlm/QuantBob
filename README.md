@@ -112,13 +112,16 @@ The task is to:
     Given a set of feature representing a sample, predict one out out 5 discrete values
 
 
-main target are the following discrete values {0, 0.25, 0.5, 0.75, 1}. Other tatgets might have other values
+main target are the following discrete values {0, 0.25, 0.5, 0.75, 1}. Auxillary targets have different values but are still five different values.
     
 What we are essentially doing is predicting the future behavior of a stock; given some state of a stock at time t, we try to predict something about its stock at time t+n, where n is some period of time
 
-#### What about the other 19 targets, what should we do with these? 
 
-these targets are referd to as Auxillary Targets. These can be used to train models and its apparently good to use them to train models, as models seems to generalize better if trained on these as well (see [ref](https://github.com/numerai/example-scripts/blob/master/analysis_and_tips.ipynb))
+#### What are Axuillary Targets? Why do we have 20 targets? What should we do with these? 
+
+We dont really know what targets are at all, this goes for Auxillary Targets as well. We do know that 20 and 60 represent day which mean that the we are predicting 20 or 60 days ahead. The main target is simply the target, one out of the 20, which numerai will evalaute models on.
+
+Auxillary Targets can be used to train models and its apparently good to use them to train models (see [ref](https://github.com/numerai/example-scripts/blob/master/analysis_and_tips.ipynb))
 
 --
 
