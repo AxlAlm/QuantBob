@@ -123,7 +123,7 @@ We dont really know what targets are at all, this goes for Auxillary Targets as 
 
 Auxillary Targets can be used to train models and its apparently good to use them to train models (see [ref](https://github.com/numerai/example-scripts/blob/master/analysis_and_tips.ipynb))
 
---
+---
 
 ## Evaluation
 
