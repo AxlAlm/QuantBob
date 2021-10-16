@@ -5,6 +5,8 @@ import pandas as pd
 from pathlib import Path
 import pytz
 from datetime import datetime
+from dataclasses import dataclass
+from typing import Optional
 
 #h5py
 #mport h5py
@@ -40,8 +42,28 @@ class Dataset:
         #download data
         self.__download_data(force_download = force_download)
 
-        # read the data into dataframes
-        self.__read_data()
+
+    @property
+    def train_data(self):
+        return self.__load_data("train")
+
+
+    @property
+    def val_data(self):
+        return self.__load_data("val")
+
+
+    @property
+    def tournament_data(self):
+        return self.__load_data("tournament")
+
+
+    def __load_data(self, split:str):
+        spinner = Halo(text=f'Loading {split} data', spinner='dots')
+        spinner.start(f'Loading {split} data')
+        df = pd.read_parquet(getattr(self, f"_{split}_fp"))
+        spinner.succeed()
+        return df
 
 
     def __check_new(self) -> bool:
@@ -113,67 +135,5 @@ class Dataset:
 
             #napi.download_dataset("example_predictions.parquet", os.path.join(path_to_data, "example_predictions.parquet"))
             #napi.download_dataset("example_validation_predictions.parquet", os.path.join(path_to_data, "example_validation_predictions.parquet"))
-
-
-    def __read_data(self):
-        spinner = Halo(text='Downloading Numerai Data', spinner='dots')
-
-        spinner.start('Reading parquet data')
-        training_data = pd.read_parquet(self._train_fp)
-        validation_data = pd.read_parquet(self._val_fp)
-        tournament_data = pd.read_parquet(self._tournament_fp)
-        
-        #example_preds = pd.read_parquet(f'/tmp/example_predictions.parquet')
-        #validation_preds = pd.read_parquet('/tmp/example_validation_predictions.parquet')
-        spinner.succeed()
-
-
-
-
-
-
-    # def __getitem__(self, key):
-    #     data_dict = {}
-    #     with h5py.File(self.h5py_fp, "r") as data:
-            
-    #         for key in data:
-    #             data_dict[key] = data[key][key]
-
-    #     return data_dict
-
-
-    # def __len__(self):
-    #     return self._size 
-
-
-    # # def __setup_h5py(self):
-    # #     self.h5py_f = h5py.File(os.path.join(self.root_dir, "data.h5py"), 'w')
-
-
-    # def __extract_data(self, split=None):
-    #     training_data = pd.read_csv(os.path.join(self.path_to_data, "numerai_training_data.csv"))
-    #     training_data["split"] = None
-    #     test_data = pd.read_csv(os.path.join(self.path_to_data, "numerai_tournament_data.csv"))
-    #     training_data["split"] = "test"
-
-    #     train_idxs, val_idxs = train_test_split(training_data.index.to_numpy(), test_size=0.3)
-
-    #     training_data.loc[train_idxs,"split"] = "train"
-    #     training_data.loc[val_idxs,"split"] = "train"
-
-    #     big_df = pd.concat(training_data, test_data, ignore_index=True)
-
-    #     pass
-
-
-    # def __store_data(self):
-    #     features, timesteps, targets, ids, splits =  self.__extract_data(, split=0.3)
-    #     h5py_fo = h5py.File(self.h5py_fp, 'w')
-    #     h5py_fo.create_dataset("features",  data=features.shape,    dtype=features.dtype)
-    #     h5py_fo.create_dataset("timesteps", data=timesteps,         dtype=np.int16)
-    #     h5py_fo.create_dataset("targets",   data=targets,           dtype=np.int16)
-    #     h5py_fo.create_dataset("ids",       data=ids,               dtype=np.int16)
-
-    #     self._size = features.shape[0]
 
 

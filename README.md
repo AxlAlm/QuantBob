@@ -137,27 +137,31 @@ It consist of the following modular components:
 Example:
 
 ```python
-from quantbob import QuantBob
+
+#sklearn
+from sklearn.ensemble import GradientBoostingRegressor
+
+# quantbot
 from quantbob import Dataset
-from quantbob import Evaluator
-from quantbob.data_samplers import TestDatasampler
-from lightgbm import LGBMRegressor
+from quantbob.models import BasicEnsambler
+from quantbob.evaluation import validation_metrics
 
-# Init Bob
-bob = QuantBob(
-                dataset = Dataset,
-                evaluator = Evaluator,
-                data_sampler = TestDatasampler,
-                model = LGBMRegressor
-                )
+# download the dataset
+dataset = Dataset()
 
-# Train bob
-bob.train()
+# we select a model. BasicEnsambler is a naive model which takes a sklearn ensamble classifier
+# and trains it on all the data. I.e. it doenst do any type of features selection, normalisation, ensambling
+# by era or anything. 
+model = BasicEnsambler(GradientBoostingRegressor, n_estimators=2, learning_rate=0.1, max_depth=1, random_state=0)
 
-# gives us the scores
-bob.scores()
+# Fit the model
+model.fit(dataset.train_data)
 
-# Predict with bob, return path to csv predictions
-pred_csv = bob.predict(pred_Data)
+# predict on the validation set
+dataset.val_data.loc[:, "pred"] = model.predict(dataset.val_data)
+
+
+# lastly, we evaluate our model by using the validation metric given by Numerai.
+validation_metrics(dataset.val_data)
 ```
 
