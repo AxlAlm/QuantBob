@@ -1,7 +1,6 @@
 numpy==1.18.1
 scikit-learn==0.22.1
 pandas==1.2.5
-notebook==6.3.0
 halo==0.0.31
 torch==1.6.0
 numerapi==2.9.2
