@@ -1,8 +1,0 @@
-name: quantbob
-channels:
-  - defaults
-dependencies:
-  - python=3.7.4
-  - pip=20.3
-  - pip:
-    - -r file:requirements.txt
