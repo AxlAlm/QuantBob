@@ -2,6 +2,7 @@
 
 # basics
 from abc import ABC, abstractmethod
+from quantbob.dataset import NumerAIDataset
 from typing import Tuple
 import pandas as pd
 
@@ -24,23 +25,17 @@ https://forum.numer.ai/t/era-wise-time-series-cross-validation/791
 class CV(ABC):
 
 
-    def __init__(self, df:pd.DataFrame, cv:int, remove_leakage=True) -> None:
+    def __init__(self, dataset : NumerAIDataset, cv:int, remove_leakage=True) -> None:
 
         # set eras as columns
-        self.df = df
-        self.df["era"] = self.df["era"].astype(int)
-        self.df = self.df.set_index("era")
+        self._dataset = dataset
 
         # get all eras. If remove_leakage == True, we remove overlapping eras, i.e. we take every 5th
-        self.eras = [i for i in range(1, self.df.index.nunique(), remove_leakage if True else 1)]
+        self.eras = [i for i in range(1, self._dataset.n_eras(), remove_leakage if True else 1)]
 
         # calculate split sizes
         self.split_size  = len(self.eras) // 3 
         self.test_size = self.split_size // 3
-
-        # get list of columns
-        self.feature_columns = [c for c in self.df.columns if "feature_" in c]
-        self.target_columns = [c for c in self.df.columns if "target_" in c]
 
         # number of cross validations
         self.cv = cv

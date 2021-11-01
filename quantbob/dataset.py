@@ -6,6 +6,7 @@ from pathlib import Path
 import pytz
 from datetime import datetime
 from typing import Optional
+import json
 
 # halo
 from halo import Halo
@@ -28,19 +29,37 @@ class NumerAIDataset:
         os.makedirs(self._path_to_data, exist_ok = True)
 
         # prev current_round file
-        self._prev_round_fp : str = os.path.join(self._path_to_data, "prev_round.txt")
+        self._info_fp : str = os.path.join(self._path_to_data, "info.json")
+        self._info = self.__load_info()
 
         # set datafiles
         self._train_fp : str = os.path.join(self._path_to_data, "numerai_training_data.parquet")
         self._val_fp : str = os.path.join(self._path_to_data, "numerai_validation_data.parquet")
-        self._tournament_fp : str  = os.path.join(self._path_to_data,"numerai_tournament_data.parquet")
+        self._tournament_fp : str  = os.path.join(self._path_to_data, "numerai_tournament_data.parquet")
+        self._train_h5_fp : str  = os.path.join(self._path_to_data, "train_data.h5")
 
         # set current round
         self._current_round = napi.get_current_round()
 
-        #download data
-        self.__download_data(force_download = force_download)
 
+        # check if there is new data
+        if self.__check_data_exist() or self.__check_new_round_exist() or force_download:
+
+            # download data
+            self.__download_data(force_download = force_download)
+
+            # transform the training data into h5 so we can 
+            # index per era quickly without haveing the whole dataset 
+            # in memory
+            self.__create_train_hdf()
+
+
+            ## info
+            self.__update_info()
+
+
+        # extract the names for features and columns
+        self._feaure_cols , self._target_cols = self.__extract_column_value()
 
     @property
     def train_data(self):
@@ -61,6 +80,44 @@ class NumerAIDataset:
     def current_round(self):
         return self._current_round("train")
 
+
+    @property
+    def features(self):
+        return self._feaure_cols
+
+
+    @property
+    def targets(self):
+        return self._target_cols
+
+
+    @property
+    def n_train_eras(self):
+        return self._n_train_eras
+
+
+    def __load_info(self) -> dict:
+
+        if not os.path.exists(self._info_fp):
+            return {}
+
+        with open(self._info_fp, "r") as f:
+            info = json.load(f)
+
+        return info
+
+
+    def __update_info(self) -> None:
+        with open(self._info_fp, "w") as f:
+            json.dump(self._info, f)
+
+
+    def get_train_xy(self, eras:list) -> pd.DataFrame:
+
+        with pd.HDFStore(self._train_h5_fp, mode = "r") as h5_storage:
+            df = h5_storage.select("df", where=f'index in {eras}')
+
+        return df[self.features].to_numpy(), df[self.targets].to_numpy()
 
 
     def __load_prev_round(self) -> int:
@@ -117,23 +174,36 @@ class NumerAIDataset:
         from https://github.com/numerai/example-scripts/blob/master/example_model.py
         
         """
+        # read in all of the new datas
+        # tournament data and example predictions change every week so we specify the round in their names
+        # training and validation data only change periodically, so no need to download them over again every single week
+        napi.download_dataset("numerai_training_data.parquet", self._train_fp)
+        napi.download_dataset("numerai_validation_data.parquet", self._val_fp)
+        napi.download_dataset("numerai_tournament_data.parquet", self._tournament_fp)
+        #napi.download_dataset("example_predictions.parquet", os.path.join(path_to_data, "example_predictions.parquet"))
+        #napi.download_dataset("example_validation_predictions.parquet", os.path.join(path_to_data, "example_validation_predictions.parquet"))
 
-        # check if there is new data
-        if self.__check_data_exist() or self.__check_new_round_exist() or force_download:
+    
+    def __create_train_hdf(self) -> None:
 
-            # read in all of the new datas
-            # tournament data and example predictions change every week so we specify the round in their names
-            # training and validation data only change periodically, so no need to download them over again every single week
-            napi.download_dataset("numerai_training_data.parquet", self._train_fp)
-            napi.download_dataset("numerai_validation_data.parquet", self._val_fp)
-            napi.download_dataset("numerai_tournament_data.parquet", self._tournament_fp)
+        if os.path.exists(self._train_h5_fp):
+            return 
+        
+        # load in all the training data
+        df = self.train_data()
 
-            #napi.download_dataset("example_predictions.parquet", os.path.join(path_to_data, "example_predictions.parquet"))
-            #napi.download_dataset("example_validation_predictions.parquet", os.path.join(path_to_data, "example_validation_predictions.parquet"))
+        # set index to eras
+        df["era"] = df["era"].astype(int)
+        df = df.set_index("era")
+
+        # create hdf file
+        df.to_hdf(self._train_h5_fp, key='df', mode='w', format='table')
 
 
-
-
+    def __extract_column_value(self):
+        df = self.get_train_eras(eras = [1])
+        return ([c for c in df.columns if "feature_" in c], 
+                [c for c in df.columns if "target_" in c])
 
 
    # def __check_new(self) -> bool:
