@@ -1,0 +1,7 @@
+feature_pipeline:
+cv:
+    method: SlidingTimeCV
+model:
+    name: RandomForestRegressor
+    kwargs:
+        n_estimators: 200

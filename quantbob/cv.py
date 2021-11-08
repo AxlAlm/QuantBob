@@ -31,10 +31,10 @@ class CV(ABC):
         self._dataset = dataset
 
         # get all eras. If remove_leakage == True, we remove overlapping eras, i.e. we take every 5th
-        self.eras = [i for i in range(1, self._dataset.n_eras(), remove_leakage if True else 1)]
+        self.eras = [i for i in range(1, self._dataset.n_train_eras, remove_leakage if True else 1)]
 
         # calculate split sizes
-        self.split_size  = len(self.eras) // 3 
+        self.split_size  = len(self.eras) // cv
         self.test_size = self.split_size // 3
 
         # number of cross validations
@@ -44,12 +44,6 @@ class CV(ABC):
     def train_test_split(self, split_eras:list) -> Tuple[list, list]:
         return split_eras[:-self.test_size], split_eras[-self.test_size:]
 
-
-    def get_xy(self, eras) -> dict:
-        return {
-                "features": self.df.loc[eras, self.feature_columns],
-                "targets": self.df.loc[eras, self.target_columns]
-                }
         
     @abstractmethod
     def __iter__(self):
@@ -92,10 +86,11 @@ class ExpandingTimeCV(CV):
             # set the new split start
             self.exp_split_size += self.split_size
 
-            # return k, and xys
-            yield k, self.get_xy(train_eras), self.get_xy(test_eras)
-
-        
+            yield   (k, 
+                    self._dataset.get_xy(f'index >= {min(train_eras)} and index <= {max(train_eras)}'), 
+                    self._dataset.get_xy(f'index >= {min(test_eras)} and index <= {max(test_eras)}')
+            )
+            
 
 class SlidingTimeCV(CV):
 
@@ -131,5 +126,10 @@ class SlidingTimeCV(CV):
             # set the new split start
             split_start += self.split_size
             
-            # return k, and xys
-            yield k, self.get_xy(train_eras), self.get_xy(test_eras)
+
+            yield   (k, 
+                    self._dataset.get_xy(f'index >= {min(train_eras)} and index <= {max(train_eras)}'), 
+                    self._dataset.get_xy(f'index >= {min(test_eras)} and index <= {max(test_eras)}')
+            )
+            
+            

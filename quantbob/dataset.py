@@ -1,7 +1,9 @@
 
 #basics
+from typing import Tuple
 import os
 import pandas as pd
+import numpy as np
 from pathlib import Path
 import pytz
 from datetime import datetime
@@ -53,13 +55,13 @@ class NumerAIDataset:
             # in memory
             self.__create_train_hdf()
 
-
             ## info
             self.__update_info()
 
 
         # extract the names for features and columns
-        self._feaure_cols , self._target_cols = self.__extract_column_value()
+        self._feaure_cols , self._target_cols = self.__get_column_values()
+
 
     @property
     def train_data(self):
@@ -78,7 +80,7 @@ class NumerAIDataset:
 
     @property
     def current_round(self):
-        return self._current_round("train")
+        return self._current_round
 
 
     @property
@@ -93,7 +95,7 @@ class NumerAIDataset:
 
     @property
     def n_train_eras(self):
-        return self._n_train_eras
+        return self._info["n_train_eras"]
 
 
     def __load_info(self) -> dict:
@@ -112,30 +114,18 @@ class NumerAIDataset:
             json.dump(self._info, f)
 
 
-    def get_train_xy(self, eras:list) -> pd.DataFrame:
+    def __get_train_eras(self, where:str) -> pd.DataFrame:
 
         with pd.HDFStore(self._train_h5_fp, mode = "r") as h5_storage:
-            df = h5_storage.select("df", where=f'index in {eras}')
+            df = h5_storage.select("df", where=where)
 
+        return df
+
+
+    def get_xy(self, where:str) -> Tuple[np.ndarray, np.ndarray]:
+        df = self.__get_train_eras( where = where)
         return df[self.features].to_numpy(), df[self.targets].to_numpy()
 
-
-    def __load_prev_round(self) -> int:
-    
-        # if we dont have a file for last update we create one and return true
-        if not os.path.exists(self._prev_round_fp):
-            return None
-
-        with open(self._prev_round_fp, "r") as f:
-            prev_round = int(f.read().strip())
-
-        return prev_round
-
-
-    def __update_prev_round(self) -> int:
-    
-        with open(self._prev_round_fp, "w") as f:
-            f.write(str(self._current_round))
 
 
     def __load_data(self, split:str):
@@ -148,11 +138,12 @@ class NumerAIDataset:
 
     def __check_new_round_exist(self) -> bool:
 
-        prev_round = self.__load_prev_round()
+        prev_round = self._info.get("round", None)
         new_round_exists = prev_round != self._current_round
 
         if new_round_exists:
-            self.__update_prev_round()
+            self._info["round"] = self._current_round
+            self.__update_info()
         
         return new_round_exists
 
@@ -190,18 +181,21 @@ class NumerAIDataset:
             return 
         
         # load in all the training data
-        df = self.train_data()
+        df = self.train_data
+
+        self._info["n_train_eras"] = df["era"].nunique()
 
         # set index to eras
         df["era"] = df["era"].astype(int)
         df = df.set_index("era")
 
+
         # create hdf file
         df.to_hdf(self._train_h5_fp, key='df', mode='w', format='table')
 
 
-    def __extract_column_value(self):
-        df = self.get_train_eras(eras = [1])
+    def __get_column_values(self):
+        df = self.__get_train_eras(where = "index = 1")
         return ([c for c in df.columns if "feature_" in c], 
                 [c for c in df.columns if "target_" in c])
 

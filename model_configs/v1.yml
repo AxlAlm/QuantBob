@@ -1,0 +1,24 @@
+feature_preprocessing:
+    feature_corr:
+        name: CorrelatedFeatures
+        kwargs:
+            threshold: 0.5
+    standardization:
+        name: StandardScaler
+    dim_reduction:
+        name: PCA
+        kwargs: 
+            n_components: 100
+cv:
+    name: SlidingTimeCV
+    kwargs:
+        cv: 10
+        remove_leakage: True
+aux:
+    name:
+    targets:
+model:
+    name: XGBRegressor
+    kwargs:
+        n_estimators: 200
+        #learning_rate: 0.1

@@ -1,28 +1,37 @@
 
 # basics
 import pandas as pd
+import numpy as np
 import os
+import yaml
+import pwd
+from glob import glob
+
+# sklearn 
+from sklearn.pipeline import Pipeline
 
 # quantbob
 from quantbob import napi
 from .dataset import NumerAIDataset
+from quantbob import feature_preprocessing
+from quantbob.models import regressors
+import quantbob.cv as cvs
+
+
+
+user_dir = pwd.getpwuid(os.getuid()).pw_dir
 
 
 class QuantBob:
 
 
-    def __init__(self, 
-                cv_method : None,
-                model : None,
-                feature_preprocessing: None,     
-                debug_mode = True,   
-                ):
+    def __init__(self):
 
         # init the dataset
         self._dataset = NumerAIDataset()
 
         # setup
-        self._path_to_round = os.makedir(f"~/.quantbob/{self._dataset.current_round}", exist_ok=True)
+        self._path_to_round = os.makedirs(f"{user_dir}/.quantbob/{self._dataset.current_round}", exist_ok=True)
 
         # auxillary targets
         # if we want to train with auxillary targets 
@@ -68,20 +77,73 @@ class QuantBob:
 
         return top_df
 
-    
-    def run(self):
 
-        
+    def __read_yml(self, file_path:str) -> dict:
+
+        with open(file_path) as f:
+            config = {f"{k}_config":v for k,v in yaml.load(f, Loader=yaml.FullLoader).items()}
+
+        return config
+
+
+
+    def __feature_preprocessing(self, X: np.ndarray):
+        pass
+
+
+
+    def run(self,
+            feature_preprocessing_config:list, 
+            cv_config:dict, 
+            model_config:dict,
+            aux_config:dict
+            ) -> None:
+
+
+        debug = True
+
+        if debug:
+            cv_config["kwargs"]["cv"] = int(self._dataset.n_train_eras / 3)
+
+
+        # ----- SETUP -----
+    
+        # setup cross validations
+        cv_generator = getattr(cvs, cv_config["name"])(self._dataset, **cv_config["kwargs"])
+
+        # setup feature pipeline
+
+        d = []
+
+        for step in  feature_preprocessing_config.values():
+            dd = getattr(feature_preprocessing, step["name"])
+            print(dd)
+            dd = dd(**step.get("kwargs", {}))
+            print(dd)
+
+
+        feature_pipeline = Pipeline([getattr(feature_preprocessing, step["name"])(**step.get("kwargs", {})) 
+                                    for step in feature_preprocessing_config.values()])
+
+
+        # get model stuff
+        model_class = regressors[model_config["name"]]
+        hyperparamaters = model_config["kwargs"]
+
+
         cv_models = []
         scores = []
-        for train, test in cvs:
 
+        # ------ CV loop -----
+        for k, (train_X, train_y), (test_X, test_y) in cv_generator:
+
+            # init model for the split
             model = model_class(**hyperparamaters)
 
             # ---- train model ---
-        
+    
             # preprocess train features
-            train_x = self._feature_preprocessing(train["features"])
+            train_X = feature_pipeline.fit_transform(train_X)
 
             # auxillary targets
             # if we want to train with auxillary targets 
@@ -97,39 +159,43 @@ class QuantBob:
             if self._auxillary_targets and self._auxillary_strategy is not None:
                 raise NotImplementedError
             else:
-                model.fit(train_x, train[self._targets])
+                model.fit(train_X, train_y)
 
 
             # ----- evalute model -----
-            
             # preprocess test features
-            test_x = self._feature_preprocessing(test["features"])
+            test_x = feature_pipeline.transform(test_X)
 
             # predict on test data
-            test_y_pred = model.predict(test[self._targets])
+            test_y_pred = model.predict(test_X)
 
             # get evaluation scores
-            model_score = evalute(test_x, test[target])
+            model_score = evaluate(test_y_pred, test_y)
 
             scores.append(model_score)
             cv_models.append(model)
 
 
-        # select model or 
-        self.model_selection(cv_models, scores)
+            if debug and k == 3:
+                break
 
+
+        # select model or 
+        self._model_selection(cv_models, scores)
 
 
     def evaluate(self):
-
-
-        self._fit_model()
         pass
-      
-
-
+    
 
     def predict(self, tournament=True, validation=True):
         pass
 
+
+
+    def from_yamls(self, dir_to_configs: str):
+        
+        for fp in glob(dir_to_configs+"/*"):
+            print(fp)
+            self.run(**self.__read_yml(fp))
 
