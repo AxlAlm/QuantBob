@@ -1,8 +1,16 @@
+
+
+# more stuff
+.vscode/*
+*.ipynb
+*.lock
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
-.vscode/*
+
 
 # C extensions
 *.so

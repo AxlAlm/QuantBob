@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "quantbob"
+version = "0.1.0"
+description = ""
+authors = ["Axel Almquist <accounts@almquist.io>"]
+
+[tool.poetry.dependencies]
+python = "3.8.*"
+numpy = "1.21.4"
+tables = "3.6.1"
+pandas = "1.3.4"
+scikit-learn = "1.0.1"
+numerapi = "2.9.4"
+xgboost = "1.5.0"
+lightgbm = "3.3.1"
+PyYAML = "6.0"
+halo = "0.0.31"
+
+[tool.poetry.dev-dependencies]
+ipykernel = "6.6.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

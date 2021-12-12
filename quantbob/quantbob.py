@@ -14,7 +14,6 @@ from sklearn.pipeline import Pipeline
 from quantbob import napi
 from .dataset import NumerAIDataset
 from quantbob import feature_preprocessing
-from quantbob.models import regressors
 import quantbob.cv as cvs
 
 
