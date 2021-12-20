@@ -24,7 +24,10 @@ class NumerAIDataset:
     
     """
 
-    def __init__(self, force_download :bool =  False) -> None:
+    def __init__(self, debug:bool = False, force_download :bool =  False) -> None:
+
+        # _debug
+        self._debug = debug
 
         ## setup directory
         self._path_to_data = "/tmp/numerai_data"
@@ -32,50 +35,59 @@ class NumerAIDataset:
 
         # prev current_round file
         self._info_fp : str = os.path.join(self._path_to_data, "info.json")
-        self._info = self.__load_info()
+        self._info = self._load_info()
 
         # set datafiles
         self._train_fp : str = os.path.join(self._path_to_data, "numerai_training_data.parquet")
         self._val_fp : str = os.path.join(self._path_to_data, "numerai_validation_data.parquet")
         self._tournament_fp : str  = os.path.join(self._path_to_data, "numerai_tournament_data.parquet")
         self._train_h5_fp : str  = os.path.join(self._path_to_data, "train_data.h5")
+        self._sample_h5_fp : str = os.path.join(self._path_to_data, "sample_data.h5")
 
         # set current round
         self._current_round = napi.get_current_round()
 
 
         # check if there is new data
-        if self.__check_data_exist() or self.__check_new_round_exist() or force_download:
+        if not self._data_exist() or self._new_round_exist() or force_download:
 
             # download data
-            self.__download_data(force_download = force_download)
+            self._download_data(force_download = force_download)
+
+
+        if not os.path.exists(self._train_h5_fp):
 
             # transform the training data into h5 so we can 
             # index per era quickly without haveing the whole dataset 
             # in memory
-            self.__create_train_hdf()
+            self._create_train_hdf()
+
+
+            # creates a small sample dataset from train to be used for debug
+            if not os.path.exists(self._sample_data):
+                self._create_sample_data()
 
             ## info
-            self.__update_info()
+            self._update_info()
 
-
+ 
         # extract the names for features and columns
-        self._feaure_cols , self._target_cols = self.__get_column_values()
+        self._feaure_cols , self._target_cols = self._get_column_values()
 
 
     @property
     def train_data(self):
-        return self.__load_data("train")
+        return self._load_data("train")
 
 
     @property
     def val_data(self):
-        return self.__load_data("val")
+        return self._load_data("val")
 
 
     @property
     def tournament_data(self):
-        return self.__load_data("tournament")
+        return self._load_data("tournament")
 
 
     @property
@@ -95,10 +107,10 @@ class NumerAIDataset:
 
     @property
     def n_train_eras(self):
-        return self._info["n_train_eras"]
+        return self._info["n_train_eras" if not self._debug else "n_sample_eras"]
 
 
-    def __load_info(self) -> dict:
+    def _load_info(self) -> dict:
 
         if not os.path.exists(self._info_fp):
             return {}
@@ -109,26 +121,28 @@ class NumerAIDataset:
         return info
 
 
-    def __update_info(self) -> None:
+    def _update_info(self) -> None:
         with open(self._info_fp, "w") as f:
             json.dump(self._info, f)
 
 
-    def __get_train_eras(self, where:str) -> pd.DataFrame:
+    def _get_train_eras(self, where:str) -> pd.DataFrame:
 
-        with pd.HDFStore(self._train_h5_fp, mode = "r") as h5_storage:
+        fp = self._train_h5_fp if not self._debug else self._sample_h5_fp
+        
+        with pd.HDFStore(fp, mode = "r") as h5_storage:
             df = h5_storage.select("df", where=where)
 
         return df
 
 
     def get_xy(self, where:str) -> Tuple[np.ndarray, np.ndarray]:
-        df = self.__get_train_eras( where = where)
+        df = self._get_train_eras( where = where)
         return df[self.features].to_numpy(), df[self.targets].to_numpy()
 
 
 
-    def __load_data(self, split:str):
+    def _load_data(self, split:str):
         spinner = Halo(text=f'Loading {split} data', spinner='dots')
         spinner.start(f'Loading {split} data')
         df = pd.read_parquet(getattr(self, f"_{split}_fp"))
@@ -136,28 +150,28 @@ class NumerAIDataset:
         return df
 
 
-    def __check_new_round_exist(self) -> bool:
+    def _new_round_exist(self) -> bool:
 
         prev_round = self._info.get("round", None)
         new_round_exists = prev_round != self._current_round
 
         if new_round_exists:
             self._info["round"] = self._current_round
-            self.__update_info()
+            self._update_info()
         
         return new_round_exists
 
 
-    def __check_data_exist(self) -> bool:
+    def _data_exist(self) -> bool:
         # check if the files exist
-        no_data = not (
+        return (
             os.path.exists(self._train_fp)
             and os.path.exists(self._val_fp)
             and  os.path.exists(self._tournament_fp)
         )
 
 
-    def __download_data(self, force_download :bool) -> None:
+    def _download_data(self, force_download :bool) -> None:
 
         """
         downloading the current data using the numerapi
@@ -175,15 +189,16 @@ class NumerAIDataset:
         #napi.download_dataset("example_validation_predictions.parquet", os.path.join(path_to_data, "example_validation_predictions.parquet"))
 
     
-    def __create_train_hdf(self) -> None:
+    def _create_train_hdf(self, df: pd.DataFrame) -> None:
+        spinner = Halo(text=f'Turning training data into  h5py', spinner='dots')
+        spinner.start()
 
-        if os.path.exists(self._train_h5_fp):
-            return 
         
-        # load in all the training data
-        df = self.train_data
-
+        #save number of eras
         self._info["n_train_eras"] = df["era"].nunique()
+
+        # save shape
+        self._info["shape"] = df.shape
 
         # set index to eras
         df["era"] = df["era"].astype(int)
@@ -193,9 +208,20 @@ class NumerAIDataset:
         # create hdf file
         df.to_hdf(self._train_h5_fp, key='df', mode='w', format='table')
 
+        #end spinner
+        spinner.succeed()
 
-    def __get_column_values(self):
-        df = self.__get_train_eras(where = "index = 1")
+
+    def _create_sample_data(self) -> None:
+
+        spinner = Halo(text="creating sample data")
+        spinner.start()
+
+        rows = np.random.random_integers(low = 0, high = self._info["n_train_eras"], size = 4)
+
+
+    def _get_column_values(self):
+        df = self._get_train_eras(where = "index = 1")
         return ([c for c in df.columns if "feature_" in c], 
                 [c for c in df.columns if "target_" in c])
 

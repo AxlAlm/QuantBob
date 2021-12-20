@@ -12,7 +12,8 @@ from sklearn.pipeline import Pipeline
 
 # quantbob
 from quantbob import napi
-from .dataset import NumerAIDataset
+from .numerai_dataset import NumerAIDataset
+from .evaluation import correlation_score
 from quantbob import feature_preprocessing
 import quantbob.cv as cvs
 
@@ -77,7 +78,7 @@ class QuantBob:
         return top_df
 
 
-    def __read_yml(self, file_path:str) -> dict:
+    def _read_yml(self, file_path:str) -> dict:
 
         with open(file_path) as f:
             config = {f"{k}_config":v for k,v in yaml.load(f, Loader=yaml.FullLoader).items()}
@@ -86,7 +87,7 @@ class QuantBob:
 
 
 
-    def __feature_preprocessing(self, X: np.ndarray):
+    def _feature_preprocessing(self, X: np.ndarray):
         pass
 
 
@@ -196,5 +197,5 @@ class QuantBob:
         
         for fp in glob(dir_to_configs+"/*"):
             print(fp)
-            self.run(**self.__read_yml(fp))
+            self.run(**self._read_yml(fp))
 

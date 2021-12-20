@@ -15,6 +15,7 @@ xgboost = "1.5.0"
 lightgbm = "3.3.1"
 PyYAML = "6.0"
 halo = "0.0.31"
+fastparquet = "0.7.2"
 
 [tool.poetry.dev-dependencies]
 ipykernel = "6.6.0"
