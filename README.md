@@ -7,56 +7,11 @@ QuantBob is my pipeline for developing models for [Numerai](https://numer.ai/), 
 
 ## Overview of QuantBob
 
-QuantBob is a very simple library aimed to do four things:
+In broad strokes QuantBob does the following:
 
 1) download and upload numerai data
-2) train and predict with models
-3) evaluate models
-4) document and store the score of various models
-
-
-We have two main classes:
-
-- Dataset: will download and upload data.
-
-- Model: will contain everything from feature selection, data splitting/ensamble configuration and model training and prediction
-
-Code used for evaluation is copied from the numerai/example-scripts repo and slightly refactored (just to for me to understand that it does).
-
-
-Example:
-
-```python
-
-#sklearn
-from sklearn.ensemble import GradientBoostingRegressor
-
-# quantbot
-from quantbob import Dataset
-from quantbob.models import BasicEnsambler
-from quantbob.evaluation import validation_metrics
-
-# download the dataset
-dataset = Dataset()
-
-# we select a model. BasicEnsambler is a naive model which takes a sklearn ensamble classifier
-# and trains it on all the data. I.e. it doenst do any type of features selection, normalisation, ensambling
-# by era or anything. 
-model = BasicEnsambler(GradientBoostingRegressor, n_estimators=2, learning_rate=0.1, max_depth=1, random_state=0)
-
-# Fit the model
-model.fit(dataset.train_data)
-
-# predict on the validation set
-dataset.val_data.loc[:, "pred"] = model.predict(dataset.val_data)
-
-
-# lastly, we evaluate our model by using the validation metric given by Numerai.
-validation_metrics(dataset.val_data)
-```
-
-
-
+2) based on a user defined config of model setups; tunes hyperparamaters, compares models, and selects the top model
+4) predict and opload predictions to numerai
 
 ## Data Overiew
 
