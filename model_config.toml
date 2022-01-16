@@ -1,0 +1,15 @@
+
+
+# first we setup a basline model
+[model1]
+preprocessors = ["StandardScaler", "CorrelatedFeatures", "PCA"]
+algo = "XGBRegressor"
+
+[model1.CorrelatedFeatures]
+threshold = 0.5
+
+[model1.PCA]
+n_components = [50,100]
+
+[model1.XGBRegressor]
+n_estimators = [200, 1000]

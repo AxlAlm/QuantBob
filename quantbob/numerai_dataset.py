@@ -6,6 +6,10 @@ import pandas as pd
 import json
 from tqdm.auto import tqdm
 
+#pyarrow
+import pyarrow as pa
+from pyarrow import parquet
+
 # halo
 from halo import Halo
 
@@ -53,11 +57,17 @@ class NumerAIDataset:
         # only contain info of current round atm
         self._info_fp : str = os.path.join(self._path_to_data, "info.json")
         self._info = self._load_info()
+        
+        
+        #set cv folders
+        self._path_to_cv_data = os.path.join(self._path_to_data, "csv_data")
+        os.makedirs(self._path_to_cv_data, exist_ok = True)
 
         # set datafiles
         self._train_fp : str = os.path.join(self._path_to_data, "numerai_training_data.parquet")
         self._val_fp : str = os.path.join(self._path_to_data, "numerai_validation_data.parquet")
         self._tournament_fp : str  = os.path.join(self._path_to_data, "numerai_tournament_data.parquet")
+        self._sample_fp : str  = os.path.join(self._path_to_data, "train_sample.parquet") # for debugging quickly
 
         # set current round
         self._current_round = napi.get_current_round()
@@ -67,6 +77,17 @@ class NumerAIDataset:
 
             # download data
             self._download_data(force_download = force_download)
+            
+        
+        if self._debug:
+            
+            if self._debug and not os.path.exists(self._sample_fp):
+                self._create_sample_data()
+    
+            self._train_fp =  self._sample_fp
+            self._path_to_cv_data = os.path.join(self._path_to_data, "csv_data_sample")
+            os.makedirs(self._path_to_cv_data, exist_ok = True)
+                
 
         ## update the info
         self._update_info()
@@ -75,17 +96,17 @@ class NumerAIDataset:
     def current_round(self):
         return self._current_round
 
-
+    @Halo(text='Loading Train Data', spinner='dots')
     def get_train_data(self):
-        return self._load_data("train")
+        return pd.read_parquet(self._train_fp)
 
-
+    @Halo(text='Loading Val Data', spinner='dots')
     def get_val_data(self):
-        return self._load_data("val")
+        return pd.read_parquet(self._val_fp)
 
-
+    @Halo(text='Loading Tournament Data', spinner='dots')
     def get_tournament_data(self):
-        return self._load_data("tournament")
+        return pd.read_parquet(self._tournament_fp)
 
 
     def _load_info(self) -> dict:
@@ -102,14 +123,6 @@ class NumerAIDataset:
     def _update_info(self) -> None:
         with open(self._info_fp, "w") as f:
             json.dump(self._info, f)
-
-
-    def _load_data(self, split:str):
-        spinner = Halo(text=f'Loading {split} data', spinner='dots')
-        spinner.start()
-        df = pd.read_parquet(getattr(self, f"_{split}_fp"))
-        spinner.succeed()
-        return df
 
 
     def _new_round_exist(self) -> bool:
@@ -151,15 +164,29 @@ class NumerAIDataset:
         #napi.download_dataset("example_validation_predictions.parquet", os.path.join(path_to_data, "example_validation_predictions.parquet"))
 
 
+    def _create_sample_data(self) -> None:
+        """
+        creates a new parquet file with from the 50k first row in the training dataset.
+        
+        we use pyarrow to load the file content by batch be able to run quantbob in debug mode
+        on machines with lower memory than 32GB
+        """
+        pa_file = parquet.ParquetFile(self._train_fp)
+        for batch in pa_file.iter_batches(batch_size=120000):
+            df = pa.Table.from_batches([batch]).to_pandas()         
+            break
+         
+        df.to_parquet(self._sample_fp)
+        
+        
     def create_cvs(self, n_folds : int, method = "time_splits", remove_leakage : bool = True) -> ParquetCVReader:
      
         # set eras as index
         df = self.get_train_data()
         
-        ## setup directory
-        self._path_to_cv_data = "/tmp/numerai_data/cv_data"
-        os.makedirs(self._path_to_cv_data, exist_ok = True)
-                   
+        if self._debug:
+            n_folds = 3
+        
         if method == "time_splits":
             return self._create_time_splits( 
                                             df = df,
@@ -170,19 +197,22 @@ class NumerAIDataset:
             raise KeyError("Invalid cv split method")
     
     
-    @Halo(text='Creating CV files', spinner='dots')
+    #@Halo(text='Creating time splits parquest', spinner='dots')
     def _create_time_splits(self, df:pd.DataFrame, n_folds : int, remove_leakage : bool) -> ParquetCVReader:
         
         # filter leakage eras
         df["era"] = df["era"].astype(int)
-        n_eras = df["era"].nunique()
-        eras = [i for i in range(1, n_eras, 5 if remove_leakage else 1)]
-        df = df.loc[df["era"].isin(eras)]
+        eras = [i for i in range(1, df["era"].nunique(), 5 if remove_leakage else 1)]
+        df.set_index(["era"], inplace=True)
+        df = df.loc[eras, :]
 
+        # number of eras
+        n_eras = len(eras)
+                
         # setting split sizes
         split_size = n_eras // n_folds
-        train_split_size = (split_size // 3) * 2 # 33% as test
-
+        train_split_size = max((split_size // 3), 1) * 2 # 33% as test
+        
         # split files
         split_files : List[Tuple] = []
                         
@@ -193,20 +223,24 @@ class NumerAIDataset:
                     desc = "Creating parquet split files"):
             
             # splitting eras            
-            split_eras = eras[i:i+i]
+            split_eras = eras[i:i+split_size]
             train_eras = split_eras[:train_split_size]
             test_eras = split_eras[train_split_size:]
-
+            
             #splitting training data
             train_file_fp = os.path.join(self._path_to_cv_data, f"train_{split_id}.parquet")
-            df.loc[df.isin(train_eras)].to_parquet(train_file_fp)
+            #print(df.loc[train_eras, :])
+            df.loc[train_eras, :].to_parquet(train_file_fp)
 
             #splitting test data
             test_file_fp = os.path.join(self._path_to_cv_data, f"test_{split_id}.parquet")
-            df.loc[df.isin(test_eras)].to_parquet(test_file_fp)
+            df.loc[test_eras, :].to_parquet(test_file_fp)
 
             # adding files 
             split_files.append((train_file_fp, test_file_fp))
+            
+            # update split_id
+            split_id += 1
             
 
         return ParquetCVReader(parquet_cv_files = split_files)
