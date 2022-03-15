@@ -4,71 +4,16 @@ from typing import Tuple, List
 import os
 import pandas as pd
 import json
-from tqdm.auto import tqdm
 
-#pyarrow
+from tqdm.auto import tqdm
 import pyarrow as pa
 from pyarrow import parquet
-
-# halo
 from halo import Halo
 
-# napi
 from quantbob import napi
+from quantbob.utils.datamodule import DataModule
 
 
-        # return ([c for c in df.columns if "feature_" in c], 
-        #         [c for c in df.columns if "target_" in c])
-
-
-class ParquetCVReader(pl.LightningDataModule):
-    
-    def __init__(self, train_parquet_fp:str, val_parquet_fp:str, batch_size:int) -> None:
-        super().__init__()
-        self._train_parquet_fp = train_parquet_fp
-        self._val_parquet_fp = val_parquet_fp
-
-    def train(self) -> np.ndarray:
-        return pd.read_parquet(self._train_parquet_fp).to_numpy()
-            
-    def val(self) -> np.ndarray:
-        return pd.read_parquet(self._val_parquet_fp).to_numpy()
-            
-    def train_dataloader(self) -> DataLoader:
-        return DataLoader(
-            TensorDataset(self.train()), 
-            batch_size=self.batch_size, 
-            shuffle=True, 
-            pin_memory=True
-        )
-
-    def val_dataloader(self) -> DataLoader:
-        return DataLoader(
-            TensorDataset(self.val()), 
-            batch_size=self.batch_size, 
-            shuffle=True, 
-            pin_memory=True
-        )
-
-
-
-class FashionMNISTDataModule(pl.LightningDataModule):
-    def __init__(self, data_dir: str, batch_size: int):
-        super().__init__()
-        self.data_dir = data_dir
-        self.batch_size = batch_size
-
-    def setup(self, stage: Optional[str] = None) -> None:
-        self.mnist_test = datasets.FashionMNIST(
-            self.data_dir, train=False, download=True, transform=transforms.ToTensor()
-        )
-        mnist_full = datasets.FashionMNIST(
-            self.data_dir, train=True, download=True, transform=transforms.ToTensor()
-        )
-        self.mnist_train, self.mnist_val = random_split(mnist_full, [55000, 5000])
-
-
-        
 
 class NumerAIDataset:
 
@@ -211,10 +156,9 @@ class NumerAIDataset:
          
         df.to_parquet(self._sample_fp)
         
-
     
     #@Halo(text='Creating time splits parquest', spinner='dots')
-    def cv_splits(self, df:pd.DataFrame, n_folds : int, remove_leakage : bool) -> ParquetCVReader:
+    def cv_splits(self, n_folds : int, remove_leakage : bool) -> List[DataModule]:
         
         # set eras as index
         df = self.get_train_data()
@@ -236,7 +180,7 @@ class NumerAIDataset:
         train_split_size = max((split_size // 3), 1) * 2 # 33% as test
         
         # split files
-        split_files : List[Tuple] = []
+        datamodules = []
                         
         # creating parquet files
         split_id = 0
@@ -259,10 +203,9 @@ class NumerAIDataset:
             df.loc[test_eras, :].to_parquet(test_file_fp)
 
             # adding files 
-            split_files.append((train_file_fp, test_file_fp))
+            datamodules.append(DataModule(train_file_fp, test_file_fp))
             
             # update split_id
             split_id += 1
             
-            
-            return ParquetCVReader(parquet_cv_files = split_files)
+        return datamodules

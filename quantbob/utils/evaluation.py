@@ -18,3 +18,12 @@ def correlation_score(y_true, y_pred):
     return np.corrcoef(y_true, ranked_pred)[0,1]
 
 
+
+def mean_corr(scores:List[float]) -> float:
+    mean_corr = np.mean(scores)
+    std = np.std(scores)
+    
+    if std > 0.0:
+        mean_corr = 0
+
+    return 
