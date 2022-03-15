@@ -17,8 +17,12 @@ halo = "0.0.31"
 fastparquet = "0.7.2"
 optuna = "2.10.0"
 
+
 [tool.poetry.dev-dependencies]
 ipykernel = "6.6.0"
+ipython = "8.0.1"
+jupyterlab = "3.2.9"
+ipywidgets = "7.6.5"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
