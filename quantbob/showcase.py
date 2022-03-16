@@ -57,4 +57,3 @@ def bob():
     predictions = trainer.predict(model, datamodule=dataset.tournament_datamodule())
 
     # upload predictions
-    predictions

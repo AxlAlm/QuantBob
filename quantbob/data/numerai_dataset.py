@@ -158,7 +158,7 @@ class NumerAIDataset:
         
     
     #@Halo(text='Creating time splits parquest', spinner='dots')
-    def cv_splits(self, n_folds : int, remove_leakage : bool) -> List[DataModule]:
+    def create_splits(self, n_folds : int, remove_leakage : bool) -> List[str]:
         
         # set eras as index
         df = self.get_train_data()
@@ -180,7 +180,7 @@ class NumerAIDataset:
         train_split_size = max((split_size // 3), 1) * 2 # 33% as test
         
         # split files
-        datamodules = []
+        parquets = []
                         
         # creating parquet files
         split_id = 0
@@ -203,9 +203,9 @@ class NumerAIDataset:
             df.loc[test_eras, :].to_parquet(test_file_fp)
 
             # adding files 
-            datamodules.append(DataModule(train_file_fp, test_file_fp))
+            parquets.append((train_file_fp, test_file_fp))
             
             # update split_id
             split_id += 1
             
-        return datamodules
+        return parquets
