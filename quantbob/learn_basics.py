@@ -10,6 +10,7 @@ https://medium.com/rapids-ai/a-new-official-dask-api-for-xgboost-e8b10f3d1eb7
 
 import os
 import optuna
+from optuna.integration import XGBoostPruningCallback
 from xgboost import XGBRegressor
 
 from quantbob.data import NumerAIDataset
@@ -65,8 +66,11 @@ def objective(trial: optuna.trial.Trial) -> float:
         train_df = dd.read_parquet(train_fp)  
         val_df = dd.read_parquet(val_fp)  
         
-        y = train_df['label']
-        X = train_df.filter(regex='^feature_', axis=1)
+        train_y = train_df['label']
+        train_X = train_df.filter(regex='^feature_', axis=1)
+    
+        val_y = train_df['label']
+        val_X = train_df.filter(regex='^feature_', axis=1)
     
     
         dtrain = xgb.dask.DaskDMatrix(client, train_df)
@@ -78,7 +82,10 @@ def objective(trial: optuna.trial.Trial) -> float:
             dtrain=dtrain,
             evals=[(dval, "val")],
             num_boost_round=num_boost_round,
-            callbacks=[early_stopping()],
+            callbacks=[
+                early_stopping(),
+                optuna.integration.XGBoostPruningCallback(trial, "val_corr")
+                ],
         )
         
         history = output['history']
@@ -90,7 +97,9 @@ def objective(trial: optuna.trial.Trial) -> float:
 
 
 def basic():
-    study = optuna.create_study()
+    study = optuna.create_study(
+        optuna.pruners.MedianPruner(n_warmup_steps=5), direction="maximize"
+    )
     study.optimize(objective, n_trials=100)
     
     commet_logger.log_config(study.best_params)
