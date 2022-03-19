@@ -1,29 +1,18 @@
 
-#basics
-import numpy as np
+"""
+https://discuss.pytorch.org/t/spearmans-correlation/91931/6
+https://forum.numer.ai/t/differentiable-spearman-in-pytorch-optimize-for-corr-directly/2287/22
+https://forum.numer.ai/t/model-evaluation-metrics/337/6
 
+https://pypi.org/project/torchsort/
+"""
+import torchsort
 
-# from:
-# https://docs.numer.ai/tournament/learn#scoring
-# and
-# https://github.com/numerai/example-scripts
-
-def era_correlation(y_true, y_pred):
-    rank_pred = y_pred.groupby("eras").apply(lambda x: x.rank(pct=True, method="first"))
-    return np.corrcoef(y_true, rank_pred)[0,1]
-
-
-def correlation_score(y_true, y_pred):
-    ranked_pred = y_pred.rank(pct=True, method="first")
-    return np.corrcoef(y_true, ranked_pred)[0,1]
-
-
-
-def mean_corr(scores:List[float]) -> float:
-    mean_corr = np.mean(scores)
-    std = np.std(scores)
-    
-    if std > 0.0:
-        mean_corr = 0
-
-    return 
+def spearmans(pred, target, **kw):
+    pred = torchsort.soft_rank(pred, **kw)
+    target = torchsort.soft_rank(target, **kw)
+    pred = pred - pred.mean()
+    pred = pred / pred.norm()
+    target = target - target.mean()
+    target = target / target.norm()
+    return (pred * target).sum()

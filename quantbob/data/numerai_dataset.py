@@ -10,9 +10,14 @@ import pyarrow as pa
 from pyarrow import parquet
 from halo import Halo
 
-from quantbob import napi
 from quantbob.utils.datamodule import DataModule
 
+# numerapi
+from numerapi import NumerAPI
+
+# setup the napi, so we can import it to
+# other modules
+napi = NumerAPI()
 
 
 class NumerAIDataset:
@@ -158,7 +163,7 @@ class NumerAIDataset:
         
     
     #@Halo(text='Creating time splits parquest', spinner='dots')
-    def create_splits(self, n_folds : int, remove_leakage : bool) -> List[str]:
+    def get_datamodules(self, n_folds : int, remove_leakage : bool) -> List[DataModule]:
         
         # set eras as index
         df = self.get_train_data()
@@ -180,7 +185,7 @@ class NumerAIDataset:
         train_split_size = max((split_size // 3), 1) * 2 # 33% as test
         
         # split files
-        parquets = []
+        datamodules = []
                         
         # creating parquet files
         split_id = 0
@@ -203,9 +208,9 @@ class NumerAIDataset:
             df.loc[test_eras, :].to_parquet(test_file_fp)
 
             # adding files 
-            parquets.append((train_file_fp, test_file_fp))
+            datamodules.append(DataModule(train_file_fp, test_file_fp))
             
             # update split_id
             split_id += 1
             
-        return parquets
+        return datamodules
