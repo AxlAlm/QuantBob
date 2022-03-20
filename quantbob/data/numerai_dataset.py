@@ -162,8 +162,7 @@ class NumerAIDataset:
         df.to_parquet(self._sample_fp)
         
     
-    #@Halo(text='Creating time splits parquest', spinner='dots')
-    def get_datamodules(self, n_folds : int, remove_leakage : bool) -> List[DataModule]:
+    def get_cv_datamodules(self, n_folds : int, remove_leakage : bool) -> List[DataModule]:
         
         # set eras as index
         df = self.get_train_data()
