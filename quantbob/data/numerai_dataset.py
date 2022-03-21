@@ -4,13 +4,14 @@ from typing import Tuple, List
 import os
 import pandas as pd
 import json
+import shutil
 
 from tqdm.auto import tqdm
 import pyarrow as pa
 from pyarrow import parquet
 from halo import Halo
 
-from quantbob.utils.datamodule import DataModule
+from quantbob.datamodule import DataModule
 
 # numerapi
 from numerapi import NumerAPI
@@ -31,49 +32,43 @@ class NumerAIDataset:
 
         # _debug
         self._debug = debug
+        
+        # set current round
+        self._current_round = napi.get_current_round()
 
-        ## setup directory
-        self._path_to_data = "/tmp/numerai_data"
+        # setup directory name
+        self._path_to_data = f"/tmp/numerai_{self._current_round}"
+        
+        # if we want to force a new download we can
+        # just delete the data that exists
+        if force_download and os.path.exists(self._path_to_data):
+            shutil.rmtree(self._path_to_data)
+        
+        # make directory
         os.makedirs(self._path_to_data, exist_ok = True)
 
-
-        # only contain info of current round atm
-        self._info_fp : str = os.path.join(self._path_to_data, "info.json")
-        self._info = self._load_info()
-        
-        
-        #set cv folders
+        # set cv folders
         self._path_to_cv_data = os.path.join(self._path_to_data, "csv_data")
         os.makedirs(self._path_to_cv_data, exist_ok = True)
 
         # set datafiles
+        ## setup directory
         self._train_fp : str = os.path.join(self._path_to_data, "numerai_training_data.parquet")
         self._val_fp : str = os.path.join(self._path_to_data, "numerai_validation_data.parquet")
         self._tournament_fp : str  = os.path.join(self._path_to_data, "numerai_tournament_data.parquet")
         self._sample_fp : str  = os.path.join(self._path_to_data, "train_sample.parquet") # for debugging quickly
 
-        # set current round
-        self._current_round = napi.get_current_round()
-
-        # check if there is new data
-        if not self._data_exist() or self._new_round_exist() or force_download:
-
-            # download data
-            self._download_data(force_download = force_download)
+        # download data
+        self._download_data()
             
-        
         if self._debug:
             
-            if self._debug and not os.path.exists(self._sample_fp):
+            if not os.path.exists(self._sample_fp):
                 self._create_sample_data()
     
             self._train_fp =  self._sample_fp
             self._path_to_cv_data = os.path.join(self._path_to_data, "csv_data_sample")
             os.makedirs(self._path_to_cv_data, exist_ok = True)
-                
-
-        ## update the info
-        self._update_info()
 
     @property
     def current_round(self):
@@ -92,34 +87,6 @@ class NumerAIDataset:
         return pd.read_parquet(self._tournament_fp)
 
 
-    def _load_info(self) -> dict:
-
-        if not os.path.exists(self._info_fp):
-            return {}
-
-        with open(self._info_fp, "r") as f:
-            info = json.load(f)
-
-        return info
-
-
-    def _update_info(self) -> None:
-        with open(self._info_fp, "w") as f:
-            json.dump(self._info, f)
-
-
-    def _new_round_exist(self) -> bool:
-
-        prev_round = self._info.get("round", None)
-        new_round_exists = prev_round != self._current_round
-
-        if new_round_exists:
-            self._info["round"] = self._current_round
-            self._update_info()
-        
-        return new_round_exists
-
-
     def _data_exist(self) -> bool:
         # check if the files exist
         return (
@@ -129,7 +96,7 @@ class NumerAIDataset:
         )
 
 
-    def _download_data(self, force_download :bool) -> None:
+    def _download_data(self) -> None:
 
         """
         downloading the current data using the numerapi
@@ -140,9 +107,17 @@ class NumerAIDataset:
         # read in all of the new datas
         # tournament data and example predictions change every week so we specify the round in their names
         # training and validation data only change periodically, so no need to download them over again every single week
-        napi.download_dataset("numerai_training_data.parquet", self._train_fp)
-        napi.download_dataset("numerai_validation_data.parquet", self._val_fp)
-        napi.download_dataset("numerai_tournament_data.parquet", self._tournament_fp)
+        
+        if not os.path.exists(self._train_fp):
+            napi.download_dataset("numerai_training_data.parquet", self._train_fp)
+            
+        if not os.path.exists(self._val_fp):
+            napi.download_dataset("numerai_validation_data.parquet", self._val_fp)
+        
+        if not os.path.exists(self._tournament_fp):
+            napi.download_dataset("numerai_tournament_data.parquet", self._tournament_fp)
+            
+
         #napi.download_dataset("example_predictions.parquet", os.path.join(path_to_data, "example_predictions.parquet"))
         #napi.download_dataset("example_validation_predictions.parquet", os.path.join(path_to_data, "example_validation_predictions.parquet"))
 
@@ -162,7 +137,12 @@ class NumerAIDataset:
         df.to_parquet(self._sample_fp)
         
     
-    def get_cv_datamodules(self, n_folds : int, remove_leakage : bool) -> List[DataModule]:
+    def get_cv_datamodules(
+        self, 
+        n_folds : int, 
+        remove_leakage : bool = True, 
+        train_val_time_gap : bool = False
+        ) -> List[DataModule]:
         
         # set eras as index
         df = self.get_train_data()

@@ -6,11 +6,12 @@ import xgboost as xgb
 from xgboost import dask as dxgb
 from dask import dataframe as dd
 from dask_cuda import LocalCUDACluster
-from distributed import Client
+#from distributed import Client
+from dask.distributed import Client, LocalCluster
 import pytorch_lightning as pl
 
-from quantbob.utils.datamodule import DataModule
-from quantbob.utils.evaluation import spearmans
+from quantbob.datamodule import DataModule
+from quantbob.evaluation import spearmans
 
 def sprearmans_wrapper(predt: np.ndarray, Xy: xgb.DMatrix):
     y = Xy.get_label()
@@ -51,7 +52,7 @@ class DaskTrainer:
             params,
             Xy,
             evals=[(Xy_valid, "Valid")],
-            num_boost_round=params.get("num_boost_round", 100),
+            num_boost_round=1, #params.get("num_boost_round", 100),
             feval=sprearmans_wrapper,
             callbacks=[es],
         )
@@ -61,7 +62,8 @@ class DaskTrainer:
     def fit(self, datamodule:DataModule, hyperparamaters:dict) -> float:
         
         # set up the cluster for 
-        with LocalCUDACluster(n_workers=2) as cluster:
+        #LocalCUDACluster
+        with LocalCluster(n_workers=2) as cluster:
             with Client(cluster) as client: 
                 output = self._dask_fit(
                     client = client,

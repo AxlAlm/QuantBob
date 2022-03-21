@@ -18,7 +18,7 @@ optuna = "2.10.0"
 pytorch-lightning = "1.5.10"
 torch = "1.11.0"
 torchsort = "0.1.9"
-dask = "dask 2022.3.0"
+dask-cuda = "22.2.0"
 comet_ml = "3.28.2"
 
 [tool.poetry.dev-dependencies]

@@ -3,6 +3,7 @@ import argparse
 import os
 from typing import List
 
+import optuna as opt
 import pytorch_lightning as pl
 import torch
 from torch import nn
@@ -13,9 +14,10 @@ class V1(pl.LightningModule):
         super().__init__()
         pass
     
-
-    def get_optuna_search_space(self) -> dict:
-        pass
+    @classmethod
+    def optuna_hyperparam_selection(self, trial:opt.trial.Trial) -> dict:
+        hyperparamaters = {}
+        return  hyperparamaters
         
     def forward(self, data: torch.Tensor) -> torch.Tensor:
         pass

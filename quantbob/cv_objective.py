@@ -1,33 +1,14 @@
 
-from typing import Union
+from typing import Callable, Union
+import os
 
 import optuna as opt
 import numpy as np
 from comet_ml import Experiment
 import pytorch_lightning as pl
 
-from quantbob.utils.trainers import DaskTrainer, PytorchLightningTrainer
-from quantbob.utils.utils import dict2uid
-
-def select_hyperparamaters(trial:opt.trial.Trial, search_space:dict) -> dict:
-    hyperparamaters = {}
-    
-    for k,values in search_space:
-        
-        hp_type = get_type(values)
-    
-        if hp_type == float:
-            hyperparamaters[k] = trial.suggest_float(k, *values)
-            
-        elif hp_type == int:
-            hyperparamaters[k] = trial.suggest_int(k, *values)
-            
-        else:
-            hyperparamaters[k] = trial.suggest_categorical(k, values)
-            
-            
-    return hyperparamaters
-
+from quantbob.trainers import DaskTrainer, PytorchLightningTrainer
+from quantbob.utils import dict2uid
 
 
 def cv_pruning(trial: opt.trial.Trial, score:float, cv_i:int) -> None:
@@ -75,25 +56,24 @@ class CrossValidationObjective:
     def __init__(
         self, 
         datamodules:list, 
-        search_space:dict, 
+        get_hps:Callable, 
         trainer:Union[PytorchLightningTrainer, DaskTrainer], 
         nn:pl.LightningModule = None
         ) -> None:
         self._datamodules = datamodules
         self._trainer = trainer
         self._nn = nn
-        self._search_space = search_space
+        self._get_hps = get_hps
     
     
     def __call__(self, trial: opt.trial.Trial) -> float:
         
-  
         # log hyperparameters
-        hyperparamaters = select_hyperparamaters(trial, self._search_space)       
+        hyperparamaters = self._get_hps(trial)       
                 
         experiment = Experiment(
             api_key=os.environ.get("COMET_API_KEY"),
-            project_name="QuantBob",
+            project_name="quantbob",
             experiment_key=dict2uid(hyperparamaters)
         )
     
@@ -110,7 +90,7 @@ class CrossValidationObjective:
         for i, datamodule in enumerate(self._datamodules):
             
             # fit model
-            score = self._trainer.fit(datamodule)
+            score = self._trainer.fit(datamodule, hyperparamaters)
             
             # store score
             scores.append(score)
